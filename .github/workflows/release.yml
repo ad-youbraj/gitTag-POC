@@ -43,6 +43,7 @@ jobs:
               run: |
                   CURRENT_TAG="${{ github.ref_name }}"
                   TAG_MESSAGE=$(git tag -l --format='%(contents)' "$CURRENT_TAG")
+                  echo "DEBUG TAG_MESSAGE: '$TAG_MESSAGE'"
                   if echo "$TAG_MESSAGE" | grep -q "^force:"; then
                       echo "⚠️ Force flag detected: $TAG_MESSAGE"
                       echo "✅ Skipping version increment validation"
