@@ -64,23 +64,43 @@ jobs:
                   CURR_PRE=$(echo "$CURR" | grep -oP '(?<=-)(alpha|beta|rc)\.\K[0-9]+' || echo "")
                   CURR_PRE_LABEL=$(echo "$CURR" | grep -oP '(alpha|beta|rc)(?=\.[0-9]+)' || echo "")
 
+                  echo "--- PARSED VALUES ---"
+                  echo "PREV: major=$PREV_MAJOR minor=$PREV_MINOR patch=$PREV_PATCH pre_label=$PREV_PRE_LABEL pre=$PREV_PRE"
+                  echo "CURR: major=$CURR_MAJOR minor=$CURR_MINOR patch=$CURR_PATCH pre_label=$CURR_PRE_LABEL pre=$CURR_PRE"
+
                   VALID=false
 
-                  # Case 1: major bump — minor and patch must reset to 0
+                  # Case 1: major bump — minor and patch reset to 0, no pre-release
                   if [ "$CURR_MAJOR" -eq "$((PREV_MAJOR + 1))" ] && [ "$CURR_MINOR" -eq 0 ] && [ "$CURR_PATCH" -eq 0 ] && [ -z "$CURR_PRE" ]; then
-                      VALID=true
+                    VALID=true
 
-                  # Case 2: minor bump — patch must reset to 0, major unchanged
+                  # Case 2: minor bump — patch resets to 0, major unchanged, no pre-release
                   elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$((PREV_MINOR + 1))" ] && [ "$CURR_PATCH" -eq 0 ] && [ -z "$CURR_PRE" ]; then
-                      VALID=true
+                    VALID=true
 
-                  # Case 3: patch bump — major and minor unchanged
+                  # Case 3: patch bump — major and minor unchanged, no pre-release
                   elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$((PREV_PATCH + 1))" ] && [ -z "$CURR_PRE" ]; then
-                      VALID=true
+                    VALID=true
 
                   # Case 4: pre-release bump — same version, same label, pre number +1
-                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$PREV_PATCH" ] && [ "$CURR_PRE_LABEL" = "$PREV_PRE_LABEL" ] && [ "$CURR_PRE" -eq "$((PREV_PRE + 1))" ]; then
-                      VALID=true
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$PREV_PATCH" ] && [ "$CURR_PRE_LABEL" = "$PREV_PRE_LABEL" ] && [ -n "$CURR_PRE" ] && [ -n "$PREV_PRE" ] && [ "$CURR_PRE" -eq "$((PREV_PRE + 1))" ]; then
+                    VALID=true
+
+                  # Case 5: promote beta to stable — same version, current has no pre-release
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$PREV_PATCH" ] && [ -n "$PREV_PRE" ] && [ -z "$CURR_PRE" ]; then
+                    VALID=true
+
+                  # Case 6: new pre-release on next patch — patch +1, pre-release must start at 1
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$((PREV_PATCH + 1))" ] && [ -n "$CURR_PRE" ] && [ "$CURR_PRE" -eq 1 ]; then
+                    VALID=true
+
+                  # Case 7: new pre-release on next minor — minor +1, patch resets to 0, pre-release must start at 1
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$((PREV_MINOR + 1))" ] && [ "$CURR_PATCH" -eq 0 ] && [ -n "$CURR_PRE" ] && [ "$CURR_PRE" -eq 1 ]; then
+                    VALID=true
+
+                  # Case 8: new pre-release on next major — major +1, minor+patch reset to 0, pre-release must start at 1
+                  elif [ "$CURR_MAJOR" -eq "$((PREV_MAJOR + 1))" ] && [ "$CURR_MINOR" -eq 0 ] && [ "$CURR_PATCH" -eq 0 ] && [ -n "$CURR_PRE" ] && [ "$CURR_PRE" -eq 1 ]; then
+                    VALID=true
                   fi
 
                   if [ "$VALID" = true ]; then
