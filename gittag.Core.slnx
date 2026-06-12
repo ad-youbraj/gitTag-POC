@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/gittag.Core/">
+    <Project Path="src/gittag.Core/MyCompany.Core.csproj" />
+  </Folder>
+</Solution>
