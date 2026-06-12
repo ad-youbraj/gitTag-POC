@@ -88,3 +88,10 @@ jobs:
                       echo "Only increment by 1. Lower segments must reset to 0 on major/minor bump."
                       exit 1
                   fi
+            - name: Delete tag if validation failed
+              if: failure()
+              run: |
+                  curl -X DELETE \
+                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{ github.ref_name }}"
+                  echo "🗑️ Deleted invalid tag ${{ github.ref_name }}"
