@@ -84,7 +84,7 @@ jobs:
                   if [ "$VALID" = true ]; then
                       echo "✅ Version increment is valid: $PREVIOUS_TAG → $CURRENT_TAG"
                   else
-                      echo "❌ Invalid version increment: $PREVIOUS_TAG → $CURRENT_TAG"
+                      echo "❌ Invalid version increments: $PREVIOUS_TAG → $CURRENT_TAG"
                       echo "Only increment by 1. Lower segments must reset to 0 on major/minor bump."
                       exit 1
                   fi
