@@ -41,6 +41,13 @@ jobs:
                   fi
             - name: Validate version increment
               run: |
+                  TAG_MESSAGE=$(git tag -l --format='%(contents)' "$CURRENT_TAG")
+                  if echo "$TAG_MESSAGE" | grep -q "^force:"; then
+                      echo "⚠️ Force flag detected: $TAG_MESSAGE"
+                      echo "✅ Skipping version increment validation"
+                      exit 0
+                  fi
+
                   CURRENT_TAG="${{ github.ref_name }}"
                   PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "^${CURRENT_TAG}$" | head -n 1)
                   if [ -z "$PREVIOUS_TAG" ]; then
