@@ -37,4 +37,54 @@ jobs:
                       git branch -r --contains "$TAG_COMMIT"
                       exit 1
                   fi
-                
+            - name: Validate version increment
+              run: |
+                  CURRENT_TAG="${{ github.ref_name }}"
+                  PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | grep -v "^${CURRENT_TAG}$" | head -n 1)
+                  if [ -z "$PREVIOUS_TAG" ]; then
+                      echo "✅ No previous tag found, this is the first release"
+                      exit 0
+                  fi
+                  echo "Previous tag: $PREVIOUS_TAG"
+                  echo "Current tag:  $CURRENT_TAG"
+                  PREV=$(echo "$PREVIOUS_TAG" | sed 's/^v//')
+                  CURR=$(echo "$CURRENT_TAG" | sed 's/^v//')
+
+                  PREV_MAJOR=$(echo "$PREV" | cut -d. -f1)
+                  PREV_MINOR=$(echo "$PREV" | cut -d. -f2)
+                  PREV_PATCH=$(echo "$PREV" | cut -d. -f3 | cut -d- -f1)
+                  PREV_PRE=$(echo "$PREV" | grep -oP '(?<=-)(alpha|beta|rc)\.\K[0-9]+' || echo "")
+                  PREV_PRE_LABEL=$(echo "$PREV" | grep -oP '(alpha|beta|rc)(?=\.[0-9]+)' || echo "")
+
+                  CURR_MAJOR=$(echo "$CURR" | cut -d. -f1)
+                  CURR_MINOR=$(echo "$CURR" | cut -d. -f2)
+                  CURR_PATCH=$(echo "$CURR" | cut -d. -f3 | cut -d- -f1)
+                  CURR_PRE=$(echo "$CURR" | grep -oP '(?<=-)(alpha|beta|rc)\.\K[0-9]+' || echo "")
+                  CURR_PRE_LABEL=$(echo "$CURR" | grep -oP '(alpha|beta|rc)(?=\.[0-9]+)' || echo "")
+
+                  VALID=false
+
+                  # Case 1: major bump — minor and patch must reset to 0
+                  if [ "$CURR_MAJOR" -eq "$((PREV_MAJOR + 1))" ] && [ "$CURR_MINOR" -eq 0 ] && [ "$CURR_PATCH" -eq 0 ] && [ -z "$CURR_PRE" ]; then
+                      VALID=true
+
+                  # Case 2: minor bump — patch must reset to 0, major unchanged
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$((PREV_MINOR + 1))" ] && [ "$CURR_PATCH" -eq 0 ] && [ -z "$CURR_PRE" ]; then
+                      VALID=true
+
+                  # Case 3: patch bump — major and minor unchanged
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$((PREV_PATCH + 1))" ] && [ -z "$CURR_PRE" ]; then
+                      VALID=true
+
+                  # Case 4: pre-release bump — same version, same label, pre number +1
+                  elif [ "$CURR_MAJOR" -eq "$PREV_MAJOR" ] && [ "$CURR_MINOR" -eq "$PREV_MINOR" ] && [ "$CURR_PATCH" -eq "$PREV_PATCH" ] && [ "$CURR_PRE_LABEL" = "$PREV_PRE_LABEL" ] && [ "$CURR_PRE" -eq "$((PREV_PRE + 1))" ]; then
+                      VALID=true
+                  fi
+
+                  if [ "$VALID" = true ]; then
+                      echo "✅ Version increment is valid: $PREVIOUS_TAG → $CURRENT_TAG"
+                  else
+                      echo "❌ Invalid version increment: $PREVIOUS_TAG → $CURRENT_TAG"
+                      echo "Only increment by 1. Lower segments must reset to 0 on major/minor bump."
+                      exit 1
+                  fi
