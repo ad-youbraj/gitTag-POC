@@ -16,11 +16,25 @@ jobs:
                   fetch-depth: 0
             - name: Validate
               run: |
-                TAG='${{github.ref_name}}'
-                if [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
-                    echo "✅ Tag format is valid: $TAG"
-                else
-                    echo "❌ Invalid tag format: $TAG"
-                    echo "Expected formats: v10.0.0 or v10.0.0-beta.1 or v10.0.0-rc.2"
-                    exit 1
-                fi
+                  TAG='${{github.ref_name}}'
+                  if [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-((alpha|beta|rc)\.[0-9]+))?$ ]]; then
+                      echo "✅ Tag format is valid: $TAG"
+                  else
+                      echo "❌ Invalid tag format: $TAG"
+                      echo "Expected formats: v10.0.0 or v10.0.0-beta.1 or v10.0.0-rc.2"
+                      exit 1
+                  fi
+            - name: Validate tag is on allowed Branch
+              run: |
+                  ALLOWED_BRANCH="main"
+                  TAG_COMMIT="${{github.sha}}"
+
+                  if git branch -r --contains "$TAG_COMMIT" | grep -q "origin/${ALLOWED_BRANCH}"; then
+                      echo "Tag points to a commit on ${ALLOWED_BRANCH}"
+                  else
+                      echo "❌ Tag must point to a commit on ${ALLOWED_BRANCH}"
+                      echo "Branches containing this commit:"
+                      git branch -r --contains "$TAG_COMMIT"
+                      exit 1
+                  fi
+                
